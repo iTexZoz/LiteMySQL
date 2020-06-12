@@ -29,7 +29,7 @@ local count, result = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b
 local exists = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
 ```
 
-#Delete 
+# Delete 
 
 ```lua
 local count = Query:Select('players_settings'):Delete('uuid', '=', 'sex')
