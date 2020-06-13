@@ -4,13 +4,23 @@
 --- DateTime: 12/06/2020 19:04
 ---
 
----@class Query
-local Query = {};
+---@class Lite;
+local Lite = {};
 
----@class Select
+function Lite:Logs(Executed, Message)
+    local Started = Executed;
+    print(string.format('[%s] [LiteMySQL] [%sms] : %s^7', os.date("%Y-%m-%d %H:%M:%S", os.time()), string.gsub((Started - GetGameTimer()) + 100, '%-', ''), Message))
+end
+
+---[[ LiteMySQL Class ]]---
+
+---@class Query;
+local LiteMySQL = {};
+
+---@class Select;
 local Select = {};
 
----@class Where
+---@class Where;
 local Where = {}
 
 ---Insert
@@ -20,7 +30,8 @@ local Where = {}
 ---@param Table string
 ---@param Content table
 ---@return number
-function Query:Insert(Table, Content)
+function LiteMySQL:Insert(Table, Content)
+    local executed = GetGameTimer();
     self.fields = "";
     self.keys = "";
     self.id = nil;
@@ -35,6 +46,7 @@ function Query:Insert(Table, Content)
     while (self.id == nil) do
         Citizen.Wait(1.0)
     end
+    Lite:Logs(executed, string.format('^2INSERT %s', Table))
     if (self.id ~= nil) then
         return self.id;
     else
@@ -53,7 +65,8 @@ end
 ---@param Content table
 ---@return table
 ---@public
-function Query:Update(Table, Column, Operator, Value, Content)
+function LiteMySQL:Update(Table, Column, Operator, Value, Content)
+    local executed = GetGameTimer();
     self.affectedRows = nil;
     self.keys = "";
     self.args = {};
@@ -71,6 +84,7 @@ function Query:Update(Table, Column, Operator, Value, Content)
     while (self.affectedRows == nil) do
         Citizen.Wait(1.0)
     end
+    Lite:Logs(executed, string.format('^4UPDATED %s', Table))
     if (self.affectedRows ~= nil) then
         return self.affectedRows;
     end
@@ -80,14 +94,14 @@ end
 ---@return Select
 ---@param Table string
 ---@public
-function Query:Select(Table)
+function LiteMySQL:Select(Table)
     self.SelectTable = Table
     return Select;
 end
 
 ---GetSelectTable
 ---@public
-function Query:GetSelectTable()
+function LiteMySQL:GetSelectTable()
     return self.SelectTable;
 end
 
@@ -95,8 +109,9 @@ end
 ---@return any
 ---@private
 function Select:All()
+    local executed = GetGameTimer();
     local storage = {};
-    MySQL.Async.fetchAll(string.format('SELECT * FROM %s', Query:GetSelectTable()), { }, function(result)
+    MySQL.Async.fetchAll(string.format('SELECT * FROM %s', LiteMySQL:GetSelectTable()), { }, function(result)
         if (result ~= nil) then
             storage = result
         end
@@ -104,6 +119,7 @@ function Select:All()
     while (#storage == 0) do
         Citizen.Wait(1.0)
     end
+    Lite:Logs(executed, string.format('^5SELECTED ALL %s', LiteMySQL:GetSelectTable()))
     return #storage, storage;
 end
 
@@ -114,13 +130,15 @@ end
 ---@return number
 ---@private
 function Select:Delete(Column, Operator, Value)
+    local executed = GetGameTimer();
     local count = 0;
-    MySQL.Async.execute(string.format('DELETE FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(affectedRows)
+    MySQL.Async.execute(string.format('DELETE FROM %s WHERE %s %s @value', LiteMySQL:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(affectedRows)
         count = affectedRows
     end)
     while (count == 0) do
         Citizen.Wait(1.0)
     end
+    Lite:Logs(executed, string.format('^8DELETED %s WHERE %s %s %s', LiteMySQL:GetSelectTable(), Column, Operator, Value))
     return count;
 end
 
@@ -145,9 +163,10 @@ end
 ---@return Where
 ---@public
 function Select:Where(Column, Operator, Value)
+    local executed = GetGameTimer();
     self.whereStorage = {};
     self.whereConditions = Column, Operator, Value;
-    MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
+    MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', LiteMySQL:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
         if (result ~= nil) then
             table.insert(self.whereStorage, result)
         end
@@ -155,6 +174,7 @@ function Select:Where(Column, Operator, Value)
     while (#self.whereStorage == 0) do
         Citizen.Wait(1.0)
     end
+    Lite:Logs(executed, string.format('^5SELECTED %s WHERE %s %s %s', LiteMySQL:GetSelectTable(), Column, Operator, Value))
     return Where;
 end
 
@@ -164,9 +184,9 @@ end
 ---@public
 function Where:Update(Content)
     if (self:Exists()) then
-        local Table = Query:GetSelectTable();
+        local Table = LiteMySQL:GetSelectTable();
         local Column, Operator, Value = Select:GetWhereConditions();
-        Query:Update(Table, Column, Operator, Value, Content)
+        LiteMySQL:Update(Table, Column, Operator, Value, Content)
     else
         error('Not exists')
     end
@@ -190,13 +210,13 @@ end
 RegisterCommand('LiteMySQL', function()
     MySQL.ready(function()
 
-        local affectedRows = Query:Update('players_settings', 'uuid', '=', 'sex', {
-            menus = json.encode({ style = 'SDQSDQSDQS', sound = 'RageUI' })
+        local affectedRows = LiteMySQL:Update('players_settings', 'uuid', '=', 'sex', {
+            menus = json.encode({ style = 'SS', sound = 'RageUI' })
         });
         print(affectedRows)
 
         --[[
-   Query:Insert('players_settings', {
+   LiteMySQL:Insert('players_settings', {
        uuid = 'sex',
        menus = json.encode({ test = true });
        keyboard_binds = json.encode({ test = true });
@@ -207,37 +227,37 @@ RegisterCommand('LiteMySQL', function()
 
 
         --[[
-        Query:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
+        LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
             menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
         })
         ]]--
 
 
-        --local count, result = Query:Select('players_settings'):All()
+        --local count, result = LiteMySQL:Select('players_settings'):All()
 
-        --local count, result = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
+        --local count, result = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
 
-        --local exists = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
+        --local exists = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
 
-        --local count = Query:Select('players_settings'):Delete('uuid', '=', 'sex')
+        --local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
 
         --[[
-        Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
+        LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
 
         })
         ]]--
 
         --[[
-            local count, result = Query:Select('items'):All()
+            local count, result = LiteMySQL:Select('items'):All()
             print("Count = " .. count)
-            local insertedID = Query:Insert('items', {
+            local insertedID = LiteMySQL:Insert('items', {
                 label = 'Label test',
                 name = 'name test',
                 limit = 20,
                 weight = 200,
             })
             print(insertedID)
-        ]]
+        ]]--
 
 
     end)
