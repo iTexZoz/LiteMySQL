@@ -13,6 +13,23 @@ local Select = {};
 ---@class Where
 local Where = {}
 
+---Await
+---
+---Await if value is equal to
+---
+---@param Value any
+---@param EqualTo any
+---@param Timeout number
+---@return void
+---@public
+function Query:Await(Value, EqualTo, Timeout)
+    self.attempt = 0;
+    while (Value == EqualTo or nil) and (self.attempt <= Timeout or 500) do
+        Citizen.Wait(1)
+        self.attempt = self.attempt + 1
+    end
+end
+
 ---Insert
 ---
 --- Insert database content.
@@ -21,26 +38,18 @@ local Where = {}
 ---@param Content table
 ---@return number
 function Query:Insert(Table, Content)
-    local attempt = 0;
     self.fields = "";
     self.keys = "";
     self.id = nil;
-
     for key, _ in pairs(Content) do
         self.fields = string.format('%s`%s`,', self.fields, key)
         key = string.format('@%s', key)
         self.keys = string.format('%s%s,', self.keys, key)
     end
-
     MySQL.Async.insert(string.format("INSERT INTO %s (%s) VALUES (%s)", Table, string.sub(self.fields, 1, -2), string.sub(self.keys, 1, -2)), Content, function(insertId)
-        self.id = insertId; -- TODO Réparé regarde si ça te va
+        self.id = insertId;
     end)
-
-    while self.id == nil and attempt <= 500 do
-        Citizen.Wait(1)
-        attempt = attempt + 1
-    end
-
+    self:Await(self.id, nil, 500)
     if (self.id ~= nil) then
         return self.id;
     else
@@ -48,8 +57,37 @@ function Query:Insert(Table, Content)
     end
 end
 
-function Query:Update()
-    -- TODO
+---Update
+---
+--- Update database table content with simple where condition
+---
+---@param Table string
+---@param Column string
+---@param Operator string
+---@param Value any
+---@param Content table
+---@return table
+---@public
+function Query:Update(Table, Column, Operator, Value, Content)
+    self.affectedRows = nil;
+    self.keys = "";
+    self.args = {};
+    for key, _ in pairs(Content) do
+        self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
+    end
+    for key, value in pairs(Content) do
+        self.args[string.format('@%s', key)] = value
+    end
+    self.args['@value'] = Value
+    local query = string.format("UPDATE %s SET %s WHERE %s %s @value", Table, string.sub(self.keys, 1, -3), Column, Operator, Value)
+    MySQL.Async.execute(query, self.args, function(affectedRows)
+        self.affectedRows = affectedRows;
+    end)
+    self:Await(self.affectedRows, nil, 500)
+    print(self.affectedRows)
+    if (self.affectedRows ~= nil) then
+        return self.affectedRows;
+    end
 end
 
 ---Select
@@ -71,20 +109,13 @@ end
 ---@return any
 ---@private
 function Select:All()
-    local attempt = 0;
     local storage = {};
-
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s', Query:GetSelectTable()), { }, function(result)
         if (result ~= nil) then
             storage = result
         end
     end)
-
-    while #storage == 0 and attempt <= 500 do
-        Citizen.Wait(1)
-        attempt = attempt + 1
-    end
-
+    Query:Await(#storage, 0, 500)
     return #storage, storage;
 end
 
@@ -95,25 +126,26 @@ end
 ---@return number
 ---@private
 function Select:Delete(Column, Operator, Value)
-    local attempt = 0;
     local count = 0;
     MySQL.Async.execute(string.format('DELETE FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(affectedRows)
         count = affectedRows
     end)
-
-    while count == 0 and attempt <= 500 do
-        Citizen.Wait(1)
-        attempt = attempt + 1
-    end
-
+    Query:Await(count, 0, 500)
     return count;
 end
 
 ---GetWhereResult
 ---@return table
----@private
+---@public
 function Select:GetWhereResult()
     return self.whereStorage;
+end
+
+---GetWhereConditions
+---@return table
+---@public
+function Select:GetWhereConditions()
+    return self.whereConditions;
 end
 
 ---Where
@@ -123,20 +155,14 @@ end
 ---@return Where
 ---@public
 function Select:Where(Column, Operator, Value)
-    local attempt = 0;
     self.whereStorage = {};
-
+    self.whereConditions = Column, Operator, Value;
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
         if (result ~= nil) then
             table.insert(self.whereStorage, result)
         end
     end)
-
-    while #self.whereStorage == 0 and attempt <= 500 do
-        Citizen.Wait(1)
-        attempt = attempt + 1
-    end
-
+    Query:Await(#self.whereStorage, 0, 500)
     return Where;
 end
 
@@ -146,16 +172,11 @@ end
 ---@public
 function Where:Update(Content)
     if (self:Exists()) then
-        local count = #Select:GetWhereResult();
-        if (count > 1) then
-            for key, value in pairs(Select:GetWhereResult()) do
-                -- TODO Update multiple
-            end
-        else
-            -- TODO Update one
-        end
+        local Table = Query:GetSelectTable();
+        local Column, Operator, Value = Select:GetWhereConditions();
+        Query:Update(Table, Column, Operator, Value, Content)
     else
-        -- TODO Not exists throw error
+        error('Not exists')
     end
 end
 
@@ -163,7 +184,7 @@ end
 ---@return boolean
 ---@public
 function Where:Exists()
-	return Select:GetWhereResult() ~= nil and #Select:GetWhereResult() >= 1
+    return Select:GetWhereResult() ~= nil and #Select:GetWhereResult() >= 1
 end
 
 ---Get
@@ -185,6 +206,13 @@ MySQL.ready(function()
     })
     ]]--
 
+    local affectedRows = Query:Update('players_settings', 'uuid', '=', 'sex', {
+        menus = json.encode({ style = 'SEX', sound = 'RageUI' })
+    })
+    print(affectedRows)
+
+
+
     --local count, result = Query:Select('players_settings'):All()
 
     --local count, result = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
@@ -199,16 +227,16 @@ MySQL.ready(function()
     })
     ]]--
 
---[[
-    local count, result = Query:Select('items'):All()
-    print("Count = " .. count)
-    local insertedID = Query:Insert('items', {
-        label = 'Label test',
-        name = 'name test',
-        limit = 20,
-        weight = 200,
-    })
-    print(insertedID)
-]]
+    --[[
+        local count, result = Query:Select('items'):All()
+        print("Count = " .. count)
+        local insertedID = Query:Insert('items', {
+            label = 'Label test',
+            name = 'name test',
+            limit = 20,
+            weight = 200,
+        })
+        print(insertedID)
+    ]]
 
 end)
