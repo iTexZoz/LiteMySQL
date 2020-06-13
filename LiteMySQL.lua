@@ -13,23 +13,6 @@ local Select = {};
 ---@class Where
 local Where = {}
 
----Await
----
----Await if value is equal to
----
----@param Value any
----@param EqualTo any
----@param Timeout number
----@return void
----@public
-function Query:Await(Value, EqualTo, Timeout)
-    self.attempt = 0;
-    while (Value == EqualTo or nil) and (self.attempt <= Timeout or 500) do
-        Citizen.Wait(1)
-        self.attempt = self.attempt + 1
-    end
-end
-
 ---Insert
 ---
 --- Insert database content.
@@ -49,7 +32,9 @@ function Query:Insert(Table, Content)
     MySQL.Async.insert(string.format("INSERT INTO %s (%s) VALUES (%s)", Table, string.sub(self.fields, 1, -2), string.sub(self.keys, 1, -2)), Content, function(insertId)
         self.id = insertId;
     end)
-    self:Await(self.id, nil, 500)
+    while (self.id == nil) do
+        Citizen.Wait(1.0)
+    end
     if (self.id ~= nil) then
         return self.id;
     else
@@ -76,15 +61,16 @@ function Query:Update(Table, Column, Operator, Value, Content)
         self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
     end
     for key, value in pairs(Content) do
-        self.args[string.format('@%s', key)] = value
+        self.args[string.format('@%s', key)] = value;
     end
-    self.args['@value'] = Value
+    self.args['@value'] = Value;
     local query = string.format("UPDATE %s SET %s WHERE %s %s @value", Table, string.sub(self.keys, 1, -3), Column, Operator, Value)
     MySQL.Async.execute(query, self.args, function(affectedRows)
         self.affectedRows = affectedRows;
     end)
-    self:Await(self.affectedRows, nil, 500)
-    print(self.affectedRows)
+    while (self.affectedRows == nil) do
+        Citizen.Wait(1.0)
+    end
     if (self.affectedRows ~= nil) then
         return self.affectedRows;
     end
@@ -115,7 +101,9 @@ function Select:All()
             storage = result
         end
     end)
-    Query:Await(#storage, 0, 500)
+    while (#storage == 0) do
+        Citizen.Wait(1.0)
+    end
     return #storage, storage;
 end
 
@@ -130,7 +118,9 @@ function Select:Delete(Column, Operator, Value)
     MySQL.Async.execute(string.format('DELETE FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(affectedRows)
         count = affectedRows
     end)
-    Query:Await(count, 0, 500)
+    while (count == 0) do
+        Citizen.Wait(1.0)
+    end
     return count;
 end
 
@@ -162,7 +152,9 @@ function Select:Where(Column, Operator, Value)
             table.insert(self.whereStorage, result)
         end
     end)
-    Query:Await(#self.whereStorage, 0, 500)
+    while (#self.whereStorage == 0) do
+        Citizen.Wait(1.0)
+    end
     return Where;
 end
 
@@ -195,48 +187,58 @@ function Where:Get()
     return #result, result;
 end
 
-MySQL.ready(function()
+RegisterCommand('LiteMySQL', function()
+    MySQL.ready(function()
 
-    --[[
-    Query:Insert('players_settings', {
-        uuid = 'sex',
-        menus = json.encode({ test = true });
-        keyboard_binds = json.encode({ test = true });
-        approach = "Oui argent";
-    })
-    ]]--
+        local affectedRows = Query:Update('players_settings', 'uuid', '=', 'sex', {
+            menus = json.encode({ style = 'SDQSDQSDQS', sound = 'RageUI' })
+        });
+        print(affectedRows)
 
-    local affectedRows = Query:Update('players_settings', 'uuid', '=', 'sex', {
-        menus = json.encode({ style = 'SEX', sound = 'RageUI' })
-    })
-    print(affectedRows)
+        --[[
+   Query:Insert('players_settings', {
+       uuid = 'sex',
+       menus = json.encode({ test = true });
+       keyboard_binds = json.encode({ test = true });
+       approach = "Oui argent";
+   })
+   ]]--
 
 
 
-    --local count, result = Query:Select('players_settings'):All()
-
-    --local count, result = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
-
-    --local exists = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
-
-    --local count = Query:Select('players_settings'):Delete('uuid', '=', 'sex')
-
-    --[[
-    Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
-
-    })
-    ]]--
-
-    --[[
-        local count, result = Query:Select('items'):All()
-        print("Count = " .. count)
-        local insertedID = Query:Insert('items', {
-            label = 'Label test',
-            name = 'name test',
-            limit = 20,
-            weight = 200,
+        --[[
+        Query:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
+            menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
         })
-        print(insertedID)
-    ]]
+        ]]--
 
+
+        --local count, result = Query:Select('players_settings'):All()
+
+        --local count, result = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
+
+        --local exists = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
+
+        --local count = Query:Select('players_settings'):Delete('uuid', '=', 'sex')
+
+        --[[
+        Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
+
+        })
+        ]]--
+
+        --[[
+            local count, result = Query:Select('items'):All()
+            print("Count = " .. count)
+            local insertedID = Query:Insert('items', {
+                label = 'Label test',
+                name = 'name test',
+                limit = 20,
+                weight = 200,
+            })
+            print(insertedID)
+        ]]
+
+
+    end)
 end)
