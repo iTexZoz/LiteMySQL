@@ -7,6 +7,11 @@
 ---@class Lite;
 local Lite = {};
 
+---Logs
+---@param Executed number
+---@param Message string
+---@return void
+---@public
 function Lite:Logs(Executed, Message)
     local Started = Executed;
     print(string.format('[%s] [LiteMySQL] [%sms] : %s^7', os.date("%Y-%m-%d %H:%M:%S", os.time()), string.gsub((Started - GetGameTimer()) + 100, '%-', ''), Message))
@@ -207,58 +212,46 @@ function Where:Get()
     return #result, result;
 end
 
+--[[
 RegisterCommand('LiteMySQL', function()
     MySQL.ready(function()
 
         local affectedRows = LiteMySQL:Update('players_settings', 'uuid', '=', 'sex', {
             menus = json.encode({ style = 'SS', sound = 'RageUI' })
         });
-        print(affectedRows)
 
-        --[[
-   LiteMySQL:Insert('players_settings', {
-       uuid = 'sex',
-       menus = json.encode({ test = true });
-       keyboard_binds = json.encode({ test = true });
-       approach = "Oui argent";
-   })
-   ]]--
+        LiteMySQL:Insert('players_settings', {
+            uuid = 'sex',
+            menus = json.encode({ test = true });
+            keyboard_binds = json.encode({ test = true });
+            approach = "Oui argent";
+        })
 
-
-
-        --[[
         LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
             menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
         })
-        ]]--
 
+        local count, result = LiteMySQL:Select('players_settings'):All()
 
-        --local count, result = LiteMySQL:Select('players_settings'):All()
+        local count, result = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
 
-        --local count, result = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
+        local exists = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
 
-        --local exists = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
+        local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
 
-        --local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
-
-        --[[
         LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
 
         })
-        ]]--
 
-        --[[
-            local count, result = LiteMySQL:Select('items'):All()
-            print("Count = " .. count)
-            local insertedID = LiteMySQL:Insert('items', {
-                label = 'Label test',
-                name = 'name test',
-                limit = 20,
-                weight = 200,
-            })
-            print(insertedID)
-        ]]--
-
+        local count, result = LiteMySQL:Select('items'):All()
+        print("Count = " .. count)
+        local insertedID = LiteMySQL:Insert('items', {
+            label = 'Label test',
+            name = 'name test',
+            limit = 20,
+            weight = 200,
+        })
 
     end)
 end)
+]]--
