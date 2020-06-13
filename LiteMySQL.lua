@@ -4,6 +4,8 @@
 --- DateTime: 12/06/2020 19:04
 ---
 
+print(string.format('^2[LiteMySQL]^7 : Started'))
+
 ---@class Lite;
 local Lite = {};
 
