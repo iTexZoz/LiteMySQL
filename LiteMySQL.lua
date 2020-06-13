@@ -21,24 +21,35 @@ local Where = {}
 ---@param Content table
 ---@return number
 function Query:Insert(Table, Content)
+    local attempt = 0;
     self.fields = "";
     self.keys = "";
     self.id = nil;
+
     for key, _ in pairs(Content) do
-        self.fields = string.format('%s%s,', self.fields, key)
+        self.fields = string.format('%s`%s`,', self.fields, key)
         key = string.format('@%s', key)
         self.keys = string.format('%s%s,', self.keys, key)
     end
+
     MySQL.Async.insert(string.format("INSERT INTO %s (%s) VALUES (%s)", Table, string.sub(self.fields, 1, -2), string.sub(self.keys, 1, -2)), Content, function(insertId)
-        self.id = insertId; -- TODO Not working
+        self.id = insertId; -- TODO Réparé regarde si ça te va
     end)
+
+    while self.id == nil and attempt <= 500 do
+        Citizen.Wait(1)
+        attempt = attempt + 1
+    end
+
     if (self.id ~= nil) then
         return self.id;
+    else
+        error("InsertId is nil")
     end
 end
 
 function Query:Update()
-    -- TODO 
+    -- TODO
 end
 
 ---Select
@@ -60,13 +71,20 @@ end
 ---@return any
 ---@private
 function Select:All()
+    local attempt = 0;
     local storage = {};
+
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s', Query:GetSelectTable()), { }, function(result)
         if (result ~= nil) then
-            table.insert(storage, result)
+            storage = result
         end
     end)
-    Citizen.Wait(100.0)
+
+    while #storage == 0 and attempt <= 500 do
+        Citizen.Wait(1)
+        attempt = attempt + 1
+    end
+
     return #storage, storage;
 end
 
@@ -77,11 +95,17 @@ end
 ---@return number
 ---@private
 function Select:Delete(Column, Operator, Value)
+    local attempt = 0;
     local count = 0;
     MySQL.Async.execute(string.format('DELETE FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(affectedRows)
         count = affectedRows
     end)
-    Citizen.Wait(100.0)
+
+    while count == 0 and attempt <= 500 do
+        Citizen.Wait(1)
+        attempt = attempt + 1
+    end
+
     return count;
 end
 
@@ -99,13 +123,20 @@ end
 ---@return Where
 ---@public
 function Select:Where(Column, Operator, Value)
+    local attempt = 0;
     self.whereStorage = {};
+
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', Query:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
         if (result ~= nil) then
             table.insert(self.whereStorage, result)
         end
     end)
-    Citizen.Wait(100.0)
+
+    while #self.whereStorage == 0 and attempt <= 500 do
+        Citizen.Wait(1)
+        attempt = attempt + 1
+    end
+
     return Where;
 end
 
@@ -132,11 +163,7 @@ end
 ---@return boolean
 ---@public
 function Where:Exists()
-    if (Select:GetWhereResult() ~= nil and #Select:GetWhereResult() >= 1) then
-        return true;
-    else
-        return false;
-    end
+	return Select:GetWhereResult() ~= nil and #Select:GetWhereResult() >= 1
 end
 
 ---Get
@@ -171,4 +198,17 @@ MySQL.ready(function()
 
     })
     ]]--
+
+--[[
+    local count, result = Query:Select('items'):All()
+    print("Count = " .. count)
+    local insertedID = Query:Insert('items', {
+        label = 'Label test',
+        name = 'name test',
+        limit = 20,
+        weight = 200,
+    })
+    print(insertedID)
+]]
+
 end)
