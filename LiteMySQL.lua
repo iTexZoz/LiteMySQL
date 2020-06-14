@@ -30,6 +30,9 @@ local Select = {};
 ---@class Where;
 local Where = {}
 
+---@class Wheres;
+local Wheres = {}
+
 ---Insert
 ---
 --- Insert database content.
@@ -77,7 +80,6 @@ function LiteMySQL:Update(Table, Column, Operator, Value, Content)
     self.affectedRows = nil;
     self.keys = "";
     self.args = {};
-
     for key, _ in pairs(Content) do
         self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
     end
@@ -167,6 +169,20 @@ function Select:GetWhereConditions(Id)
     return self.whereConditions[Id or 1];
 end
 
+---GetWheresResult
+---@return table
+---@public
+function Select:GetWheresResult()
+    return self.wheresStorage;
+end
+
+---GetWheresConditions
+---@return table
+---@public
+function Select:GetWheresConditions()
+    return self.wheresConditions;
+end
+
 ---Where
 ---@param Column string
 ---@param Operator string
@@ -220,57 +236,107 @@ function Where:Get()
     return #result, result;
 end
 
+---Wheres
+---@param Table table
+---@return Wheres
+---@public
+function Select:Wheres(Table)
+    local executed = GetGameTimer();
+    self.wheresStorage = {};
+    self.keys = "";
+    self.args = {};
+    for key, value in pairs(Table) do
+        self.keys = string.format("%s `%s` %s @%s AND ", self.keys, value.column, value.operator, value.column)
+    end
+    for key, value in pairs(Table) do
+        self.args[string.format('@%s', value.column)] = value.value;
+    end
+    local query = string.format('SELECT * FROM %s WHERE %s', LiteMySQL:GetSelectTable(), string.sub(self.keys, 1, -5));
+    MySQL.Async.fetchAll(query, self.args, function(result)
+        if (result ~= nil) then
+            table.insert(self.wheresStorage, result)
+        end
+    end)
+    while (#self.wheresStorage == 0) do
+        Citizen.Wait(1.0)
+    end
+    Lite:Logs(executed, string.format('^5SELECT %s WHERE %s', LiteMySQL:GetSelectTable(), json.encode(self.args)))
+    return Wheres;
+end
+
+---Exists
+---@return boolean
+---@public
+function Wheres:Exists()
+    return Select:GetWheresResult() ~= nil and #Select:GetWheresResult() >= 1
+end
+
+---Get
+---@return any
+---@public
+function Wheres:Get()
+    local result = Select:GetWheresResult();
+    return #result, result;
+end
+
 RegisterCommand('LiteMySQL', function()
     MySQL.ready(function()
-   --[[
-        LiteMySQL:Insert('players_settings', {
-            uuid = 'sex',
-            menus = json.encode({ style = "RageUI", sound = "RageUI" });
-            keyboard_binds = json.encode({});
-            approach = json.encode({});
-        })
-        Citizen.Wait(2000)
-        LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
-            menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
-        })
 
-    
-        local affectedRows = LiteMySQL:Update('players_settings', 'uuid', '=', 'sex', {
-            menus = json.encode({ style = 'SS', sound = 'RageUI' })
-        });
 
-        LiteMySQL:Insert('players_settings', {
-            uuid =uuid,
-            menus =  json.encode({ style = "RageUI", sound = "RageUI" });
-            keyboard_binds =json.encode({});
-            approach = json.encode({});
-        })
+        --[[
 
-        LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
-            menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
-        })
+                local count, result = LiteMySQL:Select('players'):Wheres({
+            { column = 'identifier', operator = '=', value = 'discord:109464193056423936' },
+            { column = 'is_active', operator = '=', value = true },
+        }):Get();
+        
+             LiteMySQL:Insert('players_settings', {
+                 uuid = 'sex',
+                 menus = json.encode({ style = "RageUI", sound = "RageUI" });
+                 keyboard_binds = json.encode({});
+                 approach = json.encode({});
+             })
+             Citizen.Wait(2000)
+             LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
+                 menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
+             })
 
-        local count, result = LiteMySQL:Select('players_settings'):All()
+             local affectedRows = LiteMySQL:Update('players_settings', 'uuid', '=', 'sex', {
+                 menus = json.encode({ style = 'SS', sound = 'RageUI' })
+             });
 
-        local count, result = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
+             LiteMySQL:Insert('players_settings', {
+                 uuid =uuid,
+                 menus =  json.encode({ style = "RageUI", sound = "RageUI" });
+                 keyboard_binds =json.encode({});
+                 approach = json.encode({});
+             })
 
-        local exists = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
+             LiteMySQL:Select('players_settings'):Where('uuid', '=', 'sex'):Update({
+                 menus = json.encode({ style = 'xxxx', sound = 'RageUI' })
+             })
 
-        local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
+             local count, result = LiteMySQL:Select('players_settings'):All()
 
-        LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
+             local count, result = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Get();
 
-        })
+             local exists = LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Exists();
 
-        local count, result = LiteMySQL:Select('items'):All()
+             local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
 
-        local insertedID = LiteMySQL:Insert('items', {
-            label = 'Label test',
-            name = 'name test',
-            limit = 20,
-            weight = 200,
-        })
-        ]]--
+             LiteMySQL:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-8581-440a-ab52-b442c8b6d3ea'):Update({
+
+             })
+ local count = LiteMySQL:Select('players_settings'):Delete('uuid', '=', 'sex')
+             local count, result = LiteMySQL:Select('items'):All()
+
+             local insertedID = LiteMySQL:Insert('items', {
+                 label = 'Label test',
+                 name = 'name test',
+                 limit = 20,
+                 weight = 200,
+             })
+             ]]--
     end)
 end)
 
