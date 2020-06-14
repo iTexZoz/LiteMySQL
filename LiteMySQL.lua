@@ -289,7 +289,7 @@ RegisterCommand('LiteMySQL', function()
             { column = 'identifier', operator = '=', value = 'discord:109464193056423936' },
             { column = 'is_active', operator = '=', value = true },
         }):Get();
-        
+
              LiteMySQL:Insert('players_settings', {
                  uuid = 'sex',
                  menus = json.encode({ style = "RageUI", sound = "RageUI" });
