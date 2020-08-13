@@ -1,6 +1,10 @@
 # LiteMySQL
 Lite MySQL Is a MySQL Async LUA Query wrapper
 
+you need mysql-async,
+
+and created_at / updated_at field in datetime
+
 # Insert
 
 ```lua
