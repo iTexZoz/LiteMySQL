@@ -5,7 +5,7 @@ Lite MySQL Is a MySQL Async LUA Query wrapper
 
 ```lua
 Query:Insert('players_settings', {
-  uuid = 'sex',
+  uuid = 1,
   menus = json.encode({ test = true });
   keyboard_binds = json.encode({ test = true });
   approach = "Oui argent";
@@ -32,7 +32,7 @@ local exists = Query:Select('players_settings'):Where('uuid', '=', 'b7d4b94c-858
 # Delete 
 
 ```lua
-local count = Query:Select('players_settings'):Delete('uuid', '=', 'sex')
+local count = Query:Select('players_settings'):Delete('uuid', '=', 1)
 ```
 
 # Update Where
