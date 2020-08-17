@@ -80,14 +80,10 @@ function LiteMySQL:Update(Table, Column, Operator, Value, Content)
     self.affectedRows = nil;
     self.keys = "";
     self.args = {};
-    for key, _ in pairs(Content) do
-        self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
-    end
-    self.keys = string.format("%s`%s` = @%s, ", self.keys, 'updated_at', 'updated_at')
     for key, value in pairs(Content) do
+        self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
         self.args[string.format('@%s', key)] = value;
     end
-    self.args['@updated_at'] = os.date("%Y-%m-%d %H:%M:%S", os.time());
     self.args['@value'] = Value;
     local query = string.format("UPDATE %s SET %s WHERE %s %s @value", Table, string.sub(self.keys, 1, -3), Column, Operator, Value)
     MySQL.Async.execute(query, self.args, function(affectedRows)
@@ -195,7 +191,7 @@ function Select:Where(Column, Operator, Value)
     self.whereConditions = { Column, Operator, Value };
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', LiteMySQL:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
         if (result ~= nil) then
-            table.insert(self.whereStorage, result)
+            self.whereStorage = result
         end
     end)
     while (#self.whereStorage == 0) do
@@ -247,14 +243,12 @@ function Select:Wheres(Table)
     self.args = {};
     for key, value in pairs(Table) do
         self.keys = string.format("%s `%s` %s @%s AND ", self.keys, value.column, value.operator, value.column)
-    end
-    for key, value in pairs(Table) do
         self.args[string.format('@%s', value.column)] = value.value;
     end
     local query = string.format('SELECT * FROM %s WHERE %s', LiteMySQL:GetSelectTable(), string.sub(self.keys, 1, -5));
     MySQL.Async.fetchAll(query, self.args, function(result)
         if (result ~= nil) then
-            table.insert(self.wheresStorage, result)
+            self.wheresStorage = result
         end
     end)
     while (#self.wheresStorage == 0) do
