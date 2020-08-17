@@ -80,7 +80,7 @@ function LiteMySQL:Update(Table, Column, Operator, Value, Content)
     self.affectedRows = nil;
     self.keys = "";
     self.args = {};
-    for key, _ in pairs(Content) do
+    for key, value in pairs(Content) do
         self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
         self.args[string.format('@%s', key)] = value;
     end
