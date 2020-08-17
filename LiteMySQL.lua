@@ -80,7 +80,7 @@ function LiteMySQL:Update(Table, Column, Operator, Value, Content)
     self.affectedRows = nil;
     self.keys = "";
     self.args = {};
-    for key, value in pairs(Content) do
+    for key, _ in pairs(Content) do
         self.keys = string.format("%s`%s` = @%s, ", self.keys, key, key)
         self.args[string.format('@%s', key)] = value;
     end
@@ -187,14 +187,14 @@ end
 ---@public
 function Select:Where(Column, Operator, Value)
     local executed = GetGameTimer();
-    self.whereStorage = {};
+    self.whereStorage = nil;
     self.whereConditions = { Column, Operator, Value };
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', LiteMySQL:GetSelectTable(), Column, Operator), { ['@value'] = Value }, function(result)
         if (result ~= nil) then
             self.whereStorage = result
         end
     end)
-    while (#self.whereStorage == 0) do
+    while (self.whereStorage == nil) do
         Citizen.Wait(1.0)
     end
     Lite:Logs(executed, string.format('^5SELECTED %s WHERE %s %s %s', LiteMySQL:GetSelectTable(), Column, Operator, Value))
@@ -238,7 +238,7 @@ end
 ---@public
 function Select:Wheres(Table)
     local executed = GetGameTimer();
-    self.wheresStorage = {};
+    self.wheresStorage = nil;
     self.keys = "";
     self.args = {};
     for key, value in pairs(Table) do
@@ -251,7 +251,7 @@ function Select:Wheres(Table)
             self.wheresStorage = result
         end
     end)
-    while (#self.wheresStorage == 0) do
+    while (self.wheresStorage == nil) do
         Citizen.Wait(1.0)
     end
     Lite:Logs(executed, string.format('^5SELECT %s WHERE %s', LiteMySQL:GetSelectTable(), json.encode(self.args)))
