@@ -5,7 +5,6 @@
 ---
 
 print(string.format('^2[LiteMySQL]^7 : Started'))
-
 ---@class Lite;
 local Lite = {};
 
@@ -42,23 +41,23 @@ local Wheres = {}
 ---@return number
 function LiteMySQL:Insert(Table, Content)
     local executed = GetGameTimer();
-    self.fields = "";
-    self.keys = "";
-    self.id = nil;
+    local fields = "";
+    local keys = "";
+    local id = nil;
     for key, _ in pairs(Content) do
-        self.fields = string.format('%s`%s`,', self.fields, key)
+        fields = string.format('%s`%s`,', fields, key)
         key = string.format('@%s', key)
-        self.keys = string.format('%s%s,', self.keys, key)
+        keys = string.format('%s%s,', keys, key)
     end
-    MySQL.Async.insert(string.format("INSERT INTO %s (%s) VALUES (%s)", Table, string.sub(self.fields, 1, -2), string.sub(self.keys, 1, -2)), Content, function(insertId)
-        self.id = insertId;
+    MySQL.Async.insert(string.format("INSERT INTO %s (%s) VALUES (%s)", Table, string.sub(fields, 1, -2), string.sub(keys, 1, -2)), Content, function(insertId)
+        id = insertId;
     end)
-    while (self.id == nil) do
+    while (id == nil) do
         Citizen.Wait(1.0)
     end
     Lite:Logs(executed, string.format('^2INSERT %s', Table))
-    if (self.id ~= nil) then
-        return self.id;
+    if (id ~= nil) then
+        return id;
     else
         error("InsertId is nil")
     end
@@ -98,6 +97,39 @@ function LiteMySQL:Update(Table, Column, Operator, Value, Content)
     end
 end
 
+---UpdateWheres
+---@param Table string
+---@param Where table
+---@param Content table
+---return table
+---public
+function LiteMySQL:UpdateWheres(Table, Where, Content)
+    local executed = GetGameTimer();
+    self.affectedRows = nil;
+    self.keys = "";
+    self.content = "";
+    self.args = {};
+    for key, value in pairs(Content) do
+        self.content = string.format("%s`%s` = @%s, ", self.content, key, key)
+        self.args[string.format('@%s', key)] = value;
+    end
+    for _, value in pairs(Where) do
+        self.keys = string.format("%s `%s` %s @%s AND ", self.keys, value.column, value.operator, value.column)
+        self.args[string.format('@%s', value.column)] = value.value;
+    end
+    local query = string.format('UPDATE %s SET %s WHERE %s', Table, string.sub(self.content, 1, -3), string.sub(self.keys, 1, -5));
+    MySQL.Async.execute(query, self.args, function(affectedRows)
+        self.affectedRows = affectedRows;
+    end)
+    while (self.affectedRows == nil) do
+        Citizen.Wait(1.0)
+    end
+    Lite:Logs(executed, string.format('^4UPDATED %s', Table))
+    if (self.affectedRows ~= nil) then
+        return self.affectedRows;
+    end
+end
+
 ---Select
 ---@return Select
 ---@param Table string
@@ -118,13 +150,13 @@ end
 ---@private
 function Select:All()
     local executed = GetGameTimer();
-    local storage = {};
+    local storage = nil;
     MySQL.Async.fetchAll(string.format('SELECT * FROM %s', LiteMySQL:GetSelectTable()), { }, function(result)
         if (result ~= nil) then
             storage = result
         end
     end)
-    while (#storage == 0) do
+    while (storage == nil) do
         Citizen.Wait(1.0)
     end
     Lite:Logs(executed, string.format('^5SELECTED ALL %s', LiteMySQL:GetSelectTable()))
@@ -211,7 +243,7 @@ function Where:Update(Content)
         local Column = Select:GetWhereConditions(1);
         local Operator = Select:GetWhereConditions(2);
         local Value = Select:GetWhereConditions(3);
-        LiteMySQL:Update(Table, Column, Operator, Value, Content)
+        return LiteMySQL:Update(Table, Column, Operator, Value, Content)
     else
         error('Not exists')
     end
