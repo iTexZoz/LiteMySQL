@@ -12,20 +12,3 @@ function LiteMySQL:Query(driver)
     return LiteMySQL.Select;
 end
 
----Insert
----@public
----@return void
-function LiteMySQL:Insert()
-
-end
-
-function LiteMySQL:Update()
-
-end
-
-function LiteMySQL:Update()
-
-end
-
-
-

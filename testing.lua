@@ -5,7 +5,33 @@
 ---
 
 Citizen.CreateThread(function()
-    local count, result = LiteMySQL:Query('vSql'):Select('players'):Where('license', '=', 'placeholder'):Get();
+
+    --[[
+    LiteMySQL:Query():Select('players'):Insert({
+        license = "Grolyptus",
+        first_name = "Grolyptus",
+        last_name = "Grolyptus",
+        date_of_birth = "Grolyptus",
+        nationality = "Grolyptus",
+        sex = "Grolyptus",
+    })
+    ]]--
+
+    --[[
+    LiteMySQL:Query():Where("license", "=", "Anal"):CreateOrUpdate({
+        license = "Anal",
+        first_name = "Dylan",
+        last_name = "Dylan",
+        date_of_birth = "Dylan",
+        nationality = "Ma bite",
+        sex = "Dylan",
+    })
+    ]]--
+
+    --local count = LiteMySQL:Query():Select('players'):Count();
+    --print(count);
+
+    --local count, result = LiteMySQL:Query('vSql'):Select('players'):Where('license', '=', 'placeholder'):Get();
     --print(count, json.encode(result))
 
 
@@ -15,9 +41,31 @@ Citizen.CreateThread(function()
     --local exists = LiteMySQL:Query('mysql-async'):Select('players'):Where('license', '=', 'placeholder'):Exists();
     --print(exists)
 
+
     --[[
-    LiteMySQL.Schema:ta
-    ble('players', function(blueprint)
+    local count, result = LiteMySQL:Query():Select('players'):Where("license", "=", "groliptus"):CreateOrGet({
+        license = "Groliptus",
+        first_name = "Groliptus",
+        last_name = "Groliptus",
+        date_of_birth = "Groliptus",
+        nationality = "Groliptus",
+        sex = "Groliptus",
+    })
+    ]]--
+
+    --[[
+      local affectedRow = LiteMySQL:Query('mysql-async'):Select('players'):Where('license', '=', 'placeholder'):Update({
+         license = "placeholder",
+         first_name = "Dylan",
+     });
+     print(affectedRow)
+     ]]--
+
+    --local deleted = LiteMySQL:Query('mysql-async'):Select('players'):Where('license', '=', 'placeholder'):Delete();
+    --print(deleted)
+
+    --[[
+    LiteMySQL.Schema:table('players', function(blueprint)
         blueprint:id();
 
         blueprint:string('license'):unique();
@@ -30,5 +78,6 @@ Citizen.CreateThread(function()
         blueprint:timestamps(); -- created_at, updated_at
     end)
     ]]--
+
 end)
 

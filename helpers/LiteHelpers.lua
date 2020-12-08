@@ -31,3 +31,28 @@ function LiteMySQL.Helper:fetchAll(query, args)
         error(string.format("Fatal errors occurred, driver [%s] is not supported by LiteMySQL.", LiteMySQL.Select.Driver))
     end
 end
+
+function LiteMySQL.Helper:execute(query, args)
+    local timer = GetGameTimer();
+    local storage;
+    local driver = {
+        ['vSql'] = vSql.Async.execute,
+        ['mysql-async'] = MySQL.Async.execute,
+    }
+    if (driver[LiteMySQL.Select.Driver]) then
+        driver[LiteMySQL.Select.Driver](query, args, function(affectedRows)
+            if (affectedRows ~= nil) then
+                storage = affectedRows;
+            else
+                storage = false;
+            end
+        end)
+        while (storage == nil) do
+            Citizen.Wait(1.0)
+        end
+        LiteMySQL.Helper:Logs(timer, string.format('^5 %s [%s]', query, json.encode(args)))
+        return storage;
+    else
+        error(string.format("Fatal errors occurred, driver [%s] is not supported by LiteMySQL.", LiteMySQL.Select.Driver))
+    end
+end
