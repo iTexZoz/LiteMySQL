@@ -3,6 +3,16 @@ function LiteMySQL.Helper:Logs(timer, message)
     print(string.format('[^2%s^7] [%s] [LiteMySQL] [^6%sms^7] :%s^7', os.date("%Y-%m-%d %H:%M:%S", os.time()), LiteMySQL.Select.Driver, string.gsub((Started - GetGameTimer()) + 100, '%-', ''), message))
 end
 
+function LiteMySQL.Helper:ParseWheres(conditions)
+    local keys = "";
+    local args = {};
+    for _, value in pairs(conditions) do
+        keys = string.format("%s `%s` %s @%s AND ", keys, value.column, value.operator, value.column)
+        args[string.format('@%s', value.column)] = value.value;
+    end
+    return args, string.sub(keys, 1, -5);
+end
+
 ---fetchAll
 ---@param query string
 ---@param args table

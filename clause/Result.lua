@@ -1,18 +1,30 @@
 ---@class LiteMySQL.Result
 LiteMySQL.Result = LiteMySQL.Result or {};
 
----Construct
+---Where
 ---@param table string
 ---@param column string
 ---@param operator string
 ---@param value table
 ---@public
 ---@return LiteMySQL.Result
-function LiteMySQL.Result:Construct(table, column, operator, value)
+function LiteMySQL.Result:Where(table, column, operator, value)
     self.table = table;
     self.column = column;
     self.operator = operator;
     self.value = value;
+    self.conditions = false;
+    return LiteMySQL.Result;
+end
+
+---Where
+---@param table string
+---@param conditions table<string, string, any>
+---@public
+---@return LiteMySQL.Result
+function LiteMySQL.Result:Wheres(table, conditions)
+    self.table = table;
+    self.conditions = conditions;
     return LiteMySQL.Result;
 end
 
@@ -20,8 +32,14 @@ end
 ---@public
 ---@return table<number, table>
 function LiteMySQL.Result:Get()
-    local response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', self.table, self.column, self.operator), { ['@value'] = self.value })
-    if (response ~= false) then
+    local response
+    if not (self.conditions) then
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', self.table, self.column, self.operator), { ['@value'] = self.value })
+    else
+        local args, keys = LiteMySQL.Helper:ParseWheres(self.conditions);
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s', self.table, keys), args)
+    end
+    if (response ~= nil) and (response ~= false) then
         return #response, response;
     else
         return 0, nil;
@@ -32,7 +50,13 @@ end
 ---@public
 ---@return table<table>
 function LiteMySQL.Result:First()
-    local response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value', self.table, self.column, self.operator), { ['@value'] = self.value })
+    local response
+    if not (self.conditions) then
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s %s @value LIMIT 1', self.table, self.column, self.operator), { ['@value'] = self.value })
+    else
+        local args, keys = LiteMySQL.Helper:ParseWheres(self.conditions);
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT * FROM %s WHERE %s LIMIT 1', self.table, keys), args)
+    end
     if (response ~= false) and (response[1] ~= nil) then
         return response[1];
     else
@@ -44,9 +68,15 @@ end
 ---@public
 ---@return number
 function LiteMySQL.Result:Count()
-    local query = LiteMySQL.Helper:fetchAll(string.format('SELECT COUNT(*) FROM %s WHERE %s %s @value', self.table, self.column, self.operator), { ['@value'] = self.value });
-    if (query ~= nil) and (query[1] ~= nil) and (query[1]["COUNT(*)"] ~= nil) then
-        return query[1]["COUNT(*)"];
+    local response
+    if not (self.conditions) then
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT COUNT(*) FROM %s WHERE %s %s @value', self.table, self.column, self.operator), { ['@value'] = self.value })
+    else
+        local args, keys = LiteMySQL.Helper:ParseWheres(self.conditions);
+        response = LiteMySQL.Helper:fetchAll(string.format('SELECT COUNT(*) FROM %s WHERE %s', self.table, keys), args)
+    end
+    if (response ~= nil) and (response[1] ~= nil) and (response[1]["COUNT(*)"] ~= nil) then
+        return response[1]["COUNT(*)"];
     else
         return false;
     end

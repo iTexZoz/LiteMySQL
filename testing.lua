@@ -6,6 +6,38 @@
 
 Citizen.CreateThread(function()
 
+    LiteMySQL:Query():Select('players'):Insert({
+        license = "Grolyptus",
+        first_name = "Grolyptus",
+        last_name = "Grolyptus",
+        date_of_birth = "Grolyptus",
+        nationality = "Grolyptus",
+        sex = "Homme",
+    })
+
+    local count, result = LiteMySQL:Query():Select('players'):Wheres({
+        { column = 'license', operator = '=', value = 'Grolyptus' },
+        { column = 'sex', operator = '=', value = "Homme" },
+    })                             :Get();
+
+    --print(count, json.encode(result))
+
+    local  res = LiteMySQL:Query():Select('players'):Wheres({
+        { column = 'license', operator = '=', value = 'Grolyptus' },
+        { column = 'sex', operator = '=', value = "Homme" },
+    })                             :First();
+    --print(json.encode(res))
+
+
+    local  x = LiteMySQL:Query():Select('players'):Wheres({
+        { column = 'license', operator = '=', value = 'Grolyptus' },
+        { column = 'sex', operator = '=', value = "Homme" },
+    })                             :Count();
+    print(x)
+
+    local c, r = LiteMySQL:Query('vSql'):Select('players'):Where('license', '=', 'placeholder'):Get();
+    --print(c, json.encode(r))
+
     --[[
     LiteMySQL:Query():Select('players'):Insert({
         license = "Grolyptus",

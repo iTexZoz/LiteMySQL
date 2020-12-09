@@ -26,8 +26,9 @@ end
 ---Wheres
 ---@param table table
 ---@public
+---@return LiteMySQL.Result
 function LiteMySQL.Select:Wheres(table)
-
+    return LiteMySQL.Wheres:Construct(self.table, table)
 end
 
 ---Insert
